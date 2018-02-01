@@ -97,8 +97,11 @@ ENV/
 
 # Rope project settings
 .ropeproject
+<<<<<<< HEAD
 DATA/
 RUNS
 testing
 training
 data/*.png
+RUNS/kittiBox_2018_01_15_14.06
+RUNS

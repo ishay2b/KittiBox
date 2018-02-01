@@ -60,7 +60,7 @@ def inference(hypes, images, train=True,
         assert()
 
     if preprocess:
-        x = _imagenet_preprocess(images)
+        images = _imagenet_preprocess(images)
 
     is_training = tf.convert_to_tensor(train,
                                        dtype='bool',
@@ -69,7 +69,7 @@ def inference(hypes, images, train=True,
     logits = {}
 
     with tf.variable_scope('scale1'):
-        x = _conv(x, 64, ksize=7, stride=2)
+        x = _conv(images, 64, ksize=7, stride=2)
         x = _bn(x, is_training, hypes)
         x = _relu(x)
         scale1 = x
