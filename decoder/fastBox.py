@@ -386,10 +386,12 @@ def loss(hypes, decoded_logits, labels):
 
     tf.add_to_collection('total_losses', loss)
 
-    reg_loss_col = tf.GraphKeys.REGULARIZATION_LOSSES
+    reg_loss_col = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    print( "Regression loss collection: {}".format(reg_loss_col))
+    if len(reg_loss_col)==0:
+        raise IOError("Error, {} not found in graph".format(tf.GraphKeys.REGULARIZATION_LOSSES))
 
-    weight_loss = tf.add_n(tf.get_collection(reg_loss_col),
-                           name='reg_loss')
+    weight_loss = tf.add_n(reg_loss_col, name='reg_loss')
 
     total_loss = weight_loss + loss
 
