@@ -105,3 +105,5 @@ training
 data/*.png
 RUNS/kittiBox_2018_01_15_14.06
 RUNS
+.idea
+checkpoints/KittiBox_pretrained

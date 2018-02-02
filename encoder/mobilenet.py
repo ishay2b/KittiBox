@@ -2,8 +2,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os, sys, logging
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
+
+
+def git_root():
+    ''' return the root location of git rep
+    '''
+    import subprocess
+    gitroot = subprocess.Popen(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE).communicate()[0].rstrip().decode('utf-8')
+    return gitroot
+
+
 
 def _depthwise_separable_conv(
     inputs,
@@ -29,8 +40,30 @@ def _depthwise_separable_conv(
                                         num_pwc_filters,
                                         kernel_size=[1, 1],
                                         scope=sc+'/pointwise_conv')
-    bn = slim.batch_norm(pointwise_conv, scope=sc+'/pw_batch_norm')
+    bn = slim.batch_norm(pointwise_conv, scope=sc+'/Regularizer')
     return bn
+
+
+
+def _initalize_variables(hypes):
+    if hypes['load_pretrained']:
+        print("Pretrained weights are loaded.")
+        print("The model is fine-tuned from previous training.")
+        restore = hypes['restore']
+        init = tf.global_variables_initializer()
+        sess = tf.get_default_session()
+        sess.run(init)
+
+        saver = tf.train.Saver(var_list=restore)
+        logging.info("Restored list:{}".format(restore))
+        #filename = git_root()+"/checkpoints/MobileNetCheckpoint/mobilenet_v1_1.0_224.ckpt"
+        #logging.info("Loading weights from disk.")
+        #saver.restore(sess, filename)
+    else:
+        logging.info("Random initialization performed.")
+        sess = tf.get_default_session()
+        init = tf.global_variables_initializer()
+        sess.run(init)
 
 
 
@@ -48,6 +81,10 @@ def inference(
         images,
         is_training=train,
         num_classes=num_classes)
+
+    if train:
+        hypes['init_function'] = _initalize_variables
+        hypes['restore'] = tf.global_variables()
 
     dct = dict()
     dct['deep_feat'] = net.avg_pool_15
@@ -102,6 +139,7 @@ class mobilenet(object):
                 fused=True):
                 self.conv_1 = slim.convolution2d(inputs, round(32 * width_multiplier), [3, 3], stride=2, padding='SAME', scope='conv_1')
                 self.conv_1_batch_norm = slim.batch_norm(self.conv_1, scope='conv_1/batch_norm')
+                tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, self.conv_1_batch_norm) #This registers it to norm dict
                 self.conv_ds_2 = _depthwise_separable_conv(self.conv_1_batch_norm, 64, width_multiplier, sc='conv_ds_2')
                 self.conv_ds_3 = _depthwise_separable_conv(self.conv_ds_2, 128, width_multiplier, downsample=True, sc='conv_ds_3')
                 self.conv_ds_4 = _depthwise_separable_conv(self.conv_ds_3, 128, width_multiplier, sc='conv_ds_4')
@@ -155,7 +193,7 @@ if __name__=='__main__':
     key, value = reader.read(filename_queue)
     images = tf.image.decode_png(value, channels=3)
     '''
-    h, w = 224, 224 #hypes['image_height']
+    h, w = 224, 224
     h, w = hypes['image_height'], hypes['image_width']
 
     img = misc.imread('../data/demo.png')
